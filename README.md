@@ -171,8 +171,8 @@ function confettiBurst() {
 // NIE ucieka, ale jest widoczne
 function moveNo() {
   noBtn.style.position = "fixed";
-  noBtn.style.left = Math.random()*(window.innerWidth-120)+"px";
-  noBtn.style.top = Math.random()*(window.innerHeight-60)+"px";
+  noBtn.style.left = Math.random()*(window.innerWidth-12)+"px";
+  noBtn.style.top = Math.random()*(window.innerHeight-6)+"px";
 }
 noBtn.addEventListener("mouseenter", moveNo);
 noBtn.addEventListener("touchstart", moveNo);
