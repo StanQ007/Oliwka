@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💘 Walentynka 💘</title>
 
 <style>
@@ -12,15 +12,23 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: Arial, sans-serif;
-  background: linear-gradient(180deg, #ff9a9e, #fad0c4);
+}
+
+body {
+  background: url("start.jpg") center/cover no-repeat fixed;
+  transition: background-image 1s ease-in-out;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
 }
 
 #hearts, #confetti {
   position: fixed;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
-  overflow: hidden;
 }
 
 .heart {
@@ -35,20 +43,15 @@ html, body {
   to { transform: translateY(-120vh); opacity: 0; }
 }
 
-/* konfetti-serca */
 .confetti-heart {
   position: absolute;
   font-size: 20px;
-  animation: explode 1.8s ease-out forwards;
+  animation: explode 1.6s ease-out forwards;
 }
 
 @keyframes explode {
-  0% {
-    transform: translate(0,0) scale(1) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--x), var(--y)) scale(0.6) rotate(720deg);
+  to {
+    transform: translate(var(--x), var(--y)) rotate(720deg);
     opacity: 0;
   }
 }
@@ -58,16 +61,16 @@ html, body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  text-align: center;
   width: 90%;
+  text-align: center;
+  color: white;
+  z-index: 2;
 }
 
 h1 {
-  font-size: 1.8em;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+  font-size: 1.9em;
   margin-bottom: 30px;
+  text-shadow: 2px 2px 8px black;
 }
 
 .buttons {
@@ -78,7 +81,7 @@ h1 {
 
 button {
   font-size: 1.2em;
-  padding: 12px 26px;
+  padding: 12px 28px;
   border-radius: 30px;
   border: none;
 }
@@ -91,18 +94,14 @@ button {
 #no {
   background: white;
   color: #ff4d6d;
+  position: fixed;
 }
 
 .hidden { display: none; }
 
 #result {
-  color: white;
-}
-
-#result img {
-  max-width: 90%;
-  border-radius: 20px;
-  margin-top: 20px;
+  font-size: 1.6em;
+  text-shadow: 2px 2px 8px black;
 }
 
 #music {
@@ -114,6 +113,7 @@ button {
 </head>
 
 <body>
+<div class="overlay"></div>
 
 <div id="hearts"></div>
 <div id="confetti"></div>
@@ -127,8 +127,7 @@ button {
 </div>
 
 <div class="container hidden" id="result">
-  <h2>Bardzo mnie to cieszy ❤️<br>bądź gotowa 14.02.2026</h2>
-  <img src="https://media.giphy.com/media/3oz8xIsloV7zOmt81G/giphy.gif">
+  Bardzo mnie to cieszy ❤️<br>bądź gotowa 14.02.2026
 </div>
 
 <div id="music">
@@ -136,62 +135,54 @@ button {
 </div>
 
 <script>
-// tło – serca
-function createHeart(extra = false) {
+// serca
+function createHeart(extra=false) {
   const h = document.createElement("div");
   h.className = "heart";
   h.textContent = "❤️";
-  h.style.left = Math.random() * 100 + "%";
-  h.style.fontSize = (Math.random() * 20 + 16) + "px";
-  h.style.animationDuration = (extra ? 2 : Math.random() * 3 + 4) + "s";
-  document.getElementById("hearts").appendChild(h);
-  setTimeout(() => h.remove(), 7000);
+  h.style.left = Math.random()*100 + "%";
+  h.style.fontSize = Math.random()*20+16 + "px";
+  h.style.animationDuration = (extra?2:Math.random()*3+4)+"s";
+  hearts.appendChild(h);
+  setTimeout(()=>h.remove(),7000);
 }
-setInterval(() => createHeart(), 300);
+setInterval(()=>createHeart(),300);
 
-// konfetti-serca
-function confettiBurst() {
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-
-  for (let i = 0; i < 40; i++) {
-    const c = document.createElement("div");
-    c.className = "confetti-heart";
-    c.textContent = "❤️";
-    c.style.left = centerX + "px";
-    c.style.top = centerY + "px";
-    c.style.fontSize = (Math.random() * 18 + 14) + "px";
-
-    c.style.setProperty("--x", (Math.random() * 600 - 300) + "px");
-    c.style.setProperty("--y", (Math.random() * 600 - 300) + "px");
-
-    document.getElementById("confetti").appendChild(c);
-    setTimeout(() => c.remove(), 2000);
+// konfetti
+function confetti() {
+  for(let i=0;i<40;i++){
+    const c=document.createElement("div");
+    c.className="confetti-heart";
+    c.textContent="❤️";
+    c.style.left="50%";
+    c.style.top="50%";
+    c.style.setProperty("--x",(Math.random()*600-300)+"px");
+    c.style.setProperty("--y",(Math.random()*600-300)+"px");
+    confetti.appendChild(c);
+    setTimeout(()=>c.remove(),2000);
   }
 }
 
-// uciekające NIE
-const noBtn = document.getElementById("no");
-function moveNo() {
-  noBtn.style.position = "fixed";
-  noBtn.style.left = Math.random() * (window.innerWidth - 100) + "px";
-  noBtn.style.top = Math.random() * (window.innerHeight - 60) + "px";
+// NIE ucieka
+const no=document.getElementById("no");
+function moveNo(){
+  no.style.left=Math.random()*(innerWidth-120)+"px";
+  no.style.top=Math.random()*(innerHeight-60)+"px";
 }
-noBtn.addEventListener("mouseenter", moveNo);
-noBtn.addEventListener("touchstart", moveNo);
+no.addEventListener("mouseenter",moveNo);
+no.addEventListener("touchstart",moveNo);
 
-// klik TAK
-document.getElementById("yes").addEventListener("click", () => {
-  confettiBurst();
-  document.getElementById("question").classList.add("hidden");
-  document.getElementById("result").classList.remove("hidden");
+// TAK
+document.getElementById("yes").addEventListener("click",()=>{
+  confetti();
+  document.body.style.backgroundImage='url("yes.jpg")';
+  question.classList.add("hidden");
+  result.classList.remove("hidden");
 
-  setInterval(() => createHeart(true), 120);
+  setInterval(()=>createHeart(true),120);
 
-  document.getElementById("ytplayer").src =
-    "https://www.youtube.com/embed/RB-RcX5DS5A?autoplay=1&loop=1&playlist=RB-RcX5DS5A";
+  ytplayer.src="https://www.youtube.com/embed/RB-RcX5DS5A?autoplay=1&loop=1&playlist=RB-RcX5DS5A";
 });
 </script>
-
 </body>
 </html>
