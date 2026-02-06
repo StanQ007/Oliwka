@@ -1,5 +1,3 @@
-# Oliwka
-Walentynki2026
 <!DOCTYPE html>
 <html lang="pl">
 <head>
