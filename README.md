@@ -198,6 +198,42 @@ button {
   50% { transform: translate(-5px, 8px) rotate(-1deg); }
   75% { transform: translate(8px, 3px) rotate(1deg); }
 }
+
+.music-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 1s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.music-pulse {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: #4CAF50;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
 </style>
 </head>
 
@@ -249,7 +285,7 @@ button {
     <p>To będzie wyjątkowy dzień! 🥰</p>
     <p><em>"W twoich oczach jest mój cały świat..."</em></p>
   </div>
-  <button id="music-btn">🎵 Włącz muzykę</button>
+  <button id="music-btn">🔊 Głośniej</button>
 </div>
 
 <audio id="background-music" loop>
@@ -272,6 +308,43 @@ const backgroundMusic = document.getElementById("background-music");
 let currentQuestion = 1;
 let noButtons = [];
 let moveIntervals = [];
+let musicStarted = false;
+
+// Funkcja do odtwarzania muzyki
+function startMusic() {
+  if (musicStarted) return;
+  
+  backgroundMusic.volume = 0.5; // Ustaw średnią głośność
+  backgroundMusic.play()
+    .then(() => {
+      musicStarted = true;
+      console.log("Muzyka rozpoczęta");
+      showMusicIndicator();
+    })
+    .catch(error => {
+      console.log("Błąd odtwarzania muzyki:", error);
+      // Spróbuj ponownie przy następnej interakcji
+      musicStarted = false;
+    });
+}
+
+// Pokazuje wskaźnik odtwarzania muzyki
+function showMusicIndicator() {
+  const indicator = document.createElement('div');
+  indicator.className = 'music-indicator';
+  indicator.innerHTML = `
+    <div class="music-pulse"></div>
+    <span>Muzyka gra w tle</span>
+  `;
+  document.body.appendChild(indicator);
+  
+  // Ukryj wskaźnik po 5 sekundach
+  setTimeout(() => {
+    indicator.style.opacity = '0';
+    indicator.style.transition = 'opacity 1s';
+    setTimeout(() => indicator.remove(), 1000);
+  }, 5000);
+}
 
 // Serca w tle (stałe)
 function createBackgroundHeart() {
@@ -420,6 +493,11 @@ function goToNextQuestion() {
   moveIntervals.forEach(interval => clearInterval(interval));
   moveIntervals = [];
   
+  // URUCHOM MUZYKĘ PRZY PIERWSZYM "TAK"
+  if (currentQuestion === 1) {
+    startMusic();
+  }
+  
   // Ukryj aktualne pytanie
   document.getElementById(`question${currentQuestion}`).classList.add('hidden');
   
@@ -450,6 +528,11 @@ function goToNextQuestion() {
     
     // Uruchom serca w tle
     setInterval(() => createBackgroundHeart(), 100);
+    
+    // Zmień tekst przycisku muzyki
+    if (musicStarted) {
+      musicBtn.textContent = "🔊 Głośniej";
+    }
   }
 }
 
@@ -466,23 +549,32 @@ function init() {
   document.getElementById('yes2').addEventListener('click', goToNextQuestion);
   document.getElementById('yes3').addEventListener('click', goToNextQuestion);
   
-  // Przycisk muzyki
+  // Przycisk muzyki (do regulacji głośności)
   musicBtn.addEventListener('click', () => {
-    backgroundMusic.play()
-      .then(() => {
-        musicBtn.textContent = "🎵 Muzyka gra";
-        musicBtn.style.background = "#4CAF50";
-      })
-      .catch(e => {
-        musicBtn.textContent = "🎵 Kliknij ponownie";
-        console.log("Autoplay blocked:", e);
-      });
+    if (!musicStarted) {
+      startMusic();
+    } else {
+      // Zmiana głośności
+      if (backgroundMusic.volume < 0.9) {
+        backgroundMusic.volume += 0.1;
+        musicBtn.textContent = `🔊 ${Math.round(backgroundMusic.volume * 100)}%`;
+        setTimeout(() => {
+          if (musicStarted) musicBtn.textContent = "🔊 Głośniej";
+        }, 2000);
+      } else {
+        backgroundMusic.volume = 0.3;
+        musicBtn.textContent = "🔊 Cichsza";
+        setTimeout(() => {
+          if (musicStarted) musicBtn.textContent = "🔊 Głośniej";
+        }, 2000);
+      }
+    }
   });
   
-  // Automatyczne odtwarzanie muzyki po interakcji
+  // Automatyczne odtwarzanie muzyki po interakcji (rezerwowe)
   document.addEventListener('click', () => {
-    if (backgroundMusic.paused && currentQuestion === 4) {
-      backgroundMusic.play().catch(e => console.log("Music autoplay blocked"));
+    if (!musicStarted && currentQuestion > 1) {
+      startMusic();
     }
   }, { once: true });
 }
