@@ -71,6 +71,7 @@ body {
   background: rgba(0, 0, 0, 0.6);
   border-radius: 20px;
   backdrop-filter: blur(5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 h1 {
@@ -86,6 +87,8 @@ h1 {
   gap: 25px;
   margin-top: 20px;
   flex-wrap: wrap;
+  position: relative;
+  min-height: 80px;
 }
 
 button {
@@ -95,8 +98,10 @@ button {
   border: none;
   cursor: pointer;
   font-weight: bold;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: all 0.3s ease;
   min-width: 120px;
+  position: relative;
+  z-index: 10;
 }
 
 #yes, .yes-btn {
@@ -113,12 +118,14 @@ button {
 #no, .no-btn {
   background: linear-gradient(45deg, #4a4a4a, #666);
   color: white;
-  position: fixed;
+  position: relative !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  margin: 0 !important;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) !important;
 }
 
 #no:hover, .no-btn:hover {
-  transform: scale(1.05);
+  transform: scale(1.05) rotate(5deg);
 }
 
 .hidden {
@@ -170,6 +177,27 @@ button {
   color: #ff4d6d;
   font-weight: bold;
 }
+
+.no-move-area {
+  position: relative;
+  display: inline-block;
+}
+
+.no-container {
+  display: inline-block;
+  position: relative;
+}
+
+.no-btn-moving {
+  animation: gentleMove 3s infinite ease-in-out;
+}
+
+@keyframes gentleMove {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(10px, -5px) rotate(2deg); }
+  50% { transform: translate(-5px, 8px) rotate(-1deg); }
+  75% { transform: translate(8px, 3px) rotate(1deg); }
+}
 </style>
 </head>
 
@@ -184,7 +212,9 @@ button {
   <h1>Bombelku, czy będziesz moją walentynką?</h1>
   <div class="buttons">
     <button id="yes1" class="yes-btn">Tak</button>
-    <button id="no1" class="no-btn">Nie</button>
+    <div class="no-container">
+      <button id="no1" class="no-btn">Nie</button>
+    </div>
   </div>
 </div>
 
@@ -193,7 +223,9 @@ button {
   <h1>Hmm... ale czy na pewno?</h1>
   <div class="buttons">
     <button id="yes2" class="yes-btn">Jeszcze bardziej TAK!</button>
-    <button id="no2" class="no-btn">Chwila... Nie</button>
+    <div class="no-container">
+      <button id="no2" class="no-btn">Chwila... Nie</button>
+    </div>
   </div>
 </div>
 
@@ -202,7 +234,9 @@ button {
   <h1>Ostatnie pytanie... ale tak serio serio?</h1>
   <div class="buttons">
     <button id="yes3" class="yes-btn">SERIO SERIO TAK! ❤️</button>
-    <button id="no3" class="no-btn">No nie</button>
+    <div class="no-container">
+      <button id="no3" class="no-btn">No nie</button>
+    </div>
   </div>
 </div>
 
@@ -237,53 +271,7 @@ const backgroundMusic = document.getElementById("background-music");
 // Zmienne stanu
 let currentQuestion = 1;
 let noButtons = [];
-let mouseX = 0;
-let mouseY = 0;
-
-// Śledzenie pozycji myszy
-document.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-  
-  // Aktualizuj pozycję przycisków "Nie" w czasie rzeczywistym
-  updateNoButtonsPosition();
-});
-
-// Funkcja uciekania przycisków "Nie"
-function updateNoButtonsPosition() {
-  noButtons.forEach(btn => {
-    if (!btn.parentElement.parentElement.classList.contains('hidden')) {
-      const btnRect = btn.getBoundingClientRect();
-      const btnCenterX = btnRect.left + btnRect.width / 2;
-      const btnCenterY = btnRect.top + btnRect.height / 2;
-      
-      // Oblicz odległość od kursora
-      const distance = Math.sqrt(
-        Math.pow(mouseX - btnCenterX, 2) + 
-        Math.pow(mouseY - btnCenterY, 2)
-      );
-      
-      // Jeśli kursor jest zbyt blisko, przesuń przycisk
-      if (distance < 150) {
-        const angle = Math.atan2(
-          btnCenterY - mouseY,
-          btnCenterX - mouseX
-        );
-        
-        // Nowa pozycja (ucieka w przeciwnym kierunku)
-        const newX = mouseX + Math.cos(angle) * 200;
-        const newY = mouseY + Math.sin(angle) * 200;
-        
-        // Ogranicz do obszaru ekranu
-        const safeX = Math.max(20, Math.min(window.innerWidth - btnRect.width - 20, newX));
-        const safeY = Math.max(20, Math.min(window.innerHeight - btnRect.height - 20, newY));
-        
-        btn.style.left = safeX + 'px';
-        btn.style.top = safeY + 'px';
-      }
-    }
-  });
-}
+let moveIntervals = [];
 
 // Serca w tle (stałe)
 function createBackgroundHeart() {
@@ -336,8 +324,102 @@ function changeBackground(imageName) {
   document.body.style.backgroundImage = `url("${imageName}")`;
 }
 
+// Ruch przycisku "Nie" - delikatne poruszanie się w ograniczonym obszarze
+function moveNoButton(button) {
+  const container = button.closest('.buttons');
+  const containerRect = container.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  
+  // Ograniczenia ruchu - przycisk ma pozostać w obrębie kontenera buttons
+  const maxX = containerRect.width - buttonRect.width - 20;
+  const maxY = containerRect.height - buttonRect.height - 20;
+  
+  // Losowe przesunięcie (niewielkie, żeby nie wychodziło poza obszar)
+  const newX = Math.random() * maxX;
+  const newY = Math.random() * maxY;
+  
+  // Ustaw nową pozycję WZGLĘDNĄ w kontenerze
+  button.style.position = 'relative';
+  button.style.left = `${newX}px`;
+  button.style.top = `${newY}px`;
+  
+  // Dodaj efekt rotacji
+  button.style.transform = `rotate(${Math.random() * 10 - 5}deg)`;
+}
+
+// Ruch przy najechaniu myszką
+function setupNoButtonHover(button) {
+  button.addEventListener('mouseenter', () => {
+    // Przyspiesz ruch przy najechaniu
+    moveNoButton(button);
+    
+    // Dodaj efekt "ucieczki" ale w obrębie kontenera
+    const moveInterval = setInterval(() => {
+      moveNoButton(button);
+    }, 300);
+    
+    // Zapisz interval, żeby potem go wyczyścić
+    moveIntervals.push(moveInterval);
+    
+    // Dodaj efekt wizualny
+    button.style.background = 'linear-gradient(45deg, #666, #888)';
+    button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
+    
+    // Po opuszczeniu przycisku, wyczyść interval
+    const clearOnLeave = () => {
+      moveIntervals.forEach(interval => clearInterval(interval));
+      moveIntervals = [];
+      button.style.background = 'linear-gradient(45deg, #4a4a4a, #666)';
+      button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
+    };
+    
+    button.addEventListener('mouseleave', clearOnLeave, { once: true });
+  });
+}
+
+// Inicjalizacja przycisków "Nie"
+function initNoButtons() {
+  noButtons = [];
+  const noBtns = document.querySelectorAll('.no-btn');
+  
+  noBtns.forEach((btn, index) => {
+    // Dodaj początkową animację delikatnego ruchu
+    btn.classList.add('no-btn-moving');
+    
+    // Ustaw różne czasy animacji dla każdego przycisku
+    btn.style.animationDuration = `${3 + index * 0.5}s`;
+    
+    // Zapisz przycisk
+    noButtons.push(btn);
+    
+    // Ustaw hover effect
+    setupNoButtonHover(btn);
+    
+    // Dodaj event listener dla kliknięcia (efekt wizualny)
+    btn.addEventListener('click', () => {
+      // Efekt dla "Nie" - małe serduszko
+      const smallHeart = document.createElement("div");
+      smallHeart.textContent = "💔";
+      smallHeart.style.position = "absolute";
+      smallHeart.style.left = "50%";
+      smallHeart.style.top = "50%";
+      smallHeart.style.fontSize = "24px";
+      smallHeart.style.zIndex = "1000";
+      smallHeart.style.animation = "explode 1s ease-out forwards";
+      smallHeart.style.setProperty("--x", (Math.random() * 100 - 50) + "px");
+      smallHeart.style.setProperty("--y", (Math.random() * 100 - 50) + "px");
+      btn.appendChild(smallHeart);
+      setTimeout(() => smallHeart.remove(), 1000);
+    });
+  });
+}
+
 // Przejście do następnego pytania
 function goToNextQuestion() {
+  // Zatrzymaj wszystkie interwały ruchu
+  moveIntervals.forEach(interval => clearInterval(interval));
+  moveIntervals = [];
+  
   // Ukryj aktualne pytanie
   document.getElementById(`question${currentQuestion}`).classList.add('hidden');
   
@@ -353,7 +435,7 @@ function goToNextQuestion() {
     heartsRainfall(60);
     confettiBurst();
     
-    // Inicjalizuj nowy przycisk "Nie"
+    // Inicjalizuj nowe przyciski "Nie"
     initNoButtons();
   } else {
     // Ostatni ekran
@@ -369,34 +451,6 @@ function goToNextQuestion() {
     // Uruchom serca w tle
     setInterval(() => createBackgroundHeart(), 100);
   }
-}
-
-// Inicjalizacja przycisków "Nie"
-function initNoButtons() {
-  noButtons = [];
-  const noBtns = document.querySelectorAll('.no-btn');
-  noBtns.forEach(btn => {
-    // Ustaw losową początkową pozycję
-    btn.style.left = Math.random() * (window.innerWidth - 120) + 'px';
-    btn.style.top = Math.random() * (window.innerHeight - 60) + 'px';
-    btn.style.position = 'fixed';
-    noButtons.push(btn);
-    
-    // Dodaj event listener dla kliknięcia
-    btn.addEventListener('click', () => {
-      // Efekt dla "Nie" - małe serduszko
-      const smallHeart = document.createElement("div");
-      smallHeart.textContent = "💔";
-      smallHeart.style.position = "fixed";
-      smallHeart.style.left = (parseFloat(btn.style.left) + 60) + "px";
-      smallHeart.style.top = (parseFloat(btn.style.top) + 30) + "px";
-      smallHeart.style.fontSize = "24px";
-      smallHeart.style.zIndex = "1000";
-      smallHeart.style.animation = "fall 2s linear forwards";
-      document.body.appendChild(smallHeart);
-      setTimeout(() => smallHeart.remove(), 2000);
-    });
-  });
 }
 
 // Inicjalizacja
