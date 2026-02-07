@@ -132,17 +132,19 @@ button {
   display: none !important;
 }
 
-#music-btn {
+#details-btn {
   margin-top: 30px;
-  background: #ffd166;
+  background: linear-gradient(45deg, #ffd166, #ffb347);
   color: #333;
   padding: 12px 25px;
   font-size: 1em;
+  font-weight: bold;
 }
 
-#music-btn:hover {
-  background: #ffc043;
+#details-btn:hover {
+  background: linear-gradient(45deg, #ffc043, #ff9900);
   transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
 }
 
 .hearts-fall {
@@ -176,6 +178,67 @@ button {
 .final-message span {
   color: #ff4d6d;
   font-weight: bold;
+}
+
+.details-container {
+  margin-top: 25px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  animation: fadeIn 0.8s ease;
+}
+
+.details-title {
+  font-size: 1.3em;
+  color: #ffd166;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.details-content {
+  font-size: 1.1em;
+  line-height: 1.5;
+}
+
+.coordinates {
+  font-family: 'Courier New', monospace;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 15px;
+  border-radius: 10px;
+  margin: 10px 0;
+  display: inline-block;
+  font-size: 1.2em;
+  letter-spacing: 1px;
+}
+
+.meeting-time {
+  color: #ff8fa3;
+  font-weight: bold;
+  font-size: 1.3em;
+  margin-top: 10px;
+}
+
+.map-link {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffd166;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.map-link:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .no-move-area {
@@ -215,11 +278,6 @@ button {
   animation: fadeIn 1s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .music-pulse {
   display: inline-block;
   width: 12px;
@@ -233,6 +291,28 @@ button {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+.volume-control {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-control button {
+  padding: 5px 10px;
+  font-size: 0.9em;
+  min-width: 40px;
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>
 </head>
@@ -285,7 +365,21 @@ button {
     <p>To będzie wyjątkowy dzień! 🥰</p>
     <p><em>"W twoich oczach jest mój cały świat..."</em></p>
   </div>
-  <button id="music-btn">🔊 Głośniej</button>
+  
+  <button id="details-btn">📍 Pokaż szczegóły spotkania</button>
+  
+  <div id="details-info" class="hidden details-container">
+    <div class="details-title">📌 Szczegóły naszego spotkania:</div>
+    <div class="details-content">
+      <p>Współrzędne miejsca spotkania:</p>
+      <div class="coordinates">52°24′11″N 16°59′39″E</div>
+      <p>Spotykamy się około <span class="meeting-time">godziny 14:00</span></p>
+      <p>Przygotuj się na niespodziankę! 💝</p>
+      <a href="https://www.google.com/maps?q=52.403056,16.994167" target="_blank" class="map-link">
+        🗺️ Otwórz w Mapach Google
+      </a>
+    </div>
+  </div>
 </div>
 
 <audio id="background-music" loop>
@@ -301,7 +395,8 @@ const question1 = document.getElementById("question1");
 const question2 = document.getElementById("question2");
 const question3 = document.getElementById("question3");
 const finalScreen = document.getElementById("final");
-const musicBtn = document.getElementById("music-btn");
+const detailsBtn = document.getElementById("details-btn");
+const detailsInfo = document.getElementById("details-info");
 const backgroundMusic = document.getElementById("background-music");
 
 // Zmienne stanu
@@ -314,16 +409,16 @@ let musicStarted = false;
 function startMusic() {
   if (musicStarted) return;
   
-  backgroundMusic.volume = 0.5; // Ustaw średnią głośność
+  backgroundMusic.volume = 0.5;
   backgroundMusic.play()
     .then(() => {
       musicStarted = true;
       console.log("Muzyka rozpoczęta");
       showMusicIndicator();
+      createVolumeControl();
     })
     .catch(error => {
       console.log("Błąd odtwarzania muzyki:", error);
-      // Spróbuj ponownie przy następnej interakcji
       musicStarted = false;
     });
 }
@@ -338,12 +433,43 @@ function showMusicIndicator() {
   `;
   document.body.appendChild(indicator);
   
-  // Ukryj wskaźnik po 5 sekundach
   setTimeout(() => {
     indicator.style.opacity = '0';
     indicator.style.transition = 'opacity 1s';
     setTimeout(() => indicator.remove(), 1000);
   }, 5000);
+}
+
+// Tworzy kontrolkę głośności
+function createVolumeControl() {
+  const volumeControl = document.createElement('div');
+  volumeControl.className = 'volume-control';
+  volumeControl.innerHTML = `
+    <span>🔊</span>
+    <button id="volume-down">-</button>
+    <span id="volume-level">50%</span>
+    <button id="volume-up">+</button>
+  `;
+  document.body.appendChild(volumeControl);
+  
+  document.getElementById('volume-down').addEventListener('click', () => {
+    if (backgroundMusic.volume > 0.1) {
+      backgroundMusic.volume -= 0.1;
+      updateVolumeDisplay();
+    }
+  });
+  
+  document.getElementById('volume-up').addEventListener('click', () => {
+    if (backgroundMusic.volume < 1) {
+      backgroundMusic.volume += 0.1;
+      updateVolumeDisplay();
+    }
+  });
+  
+  function updateVolumeDisplay() {
+    document.getElementById('volume-level').textContent = 
+      Math.round(backgroundMusic.volume * 100) + '%';
+  }
 }
 
 // Serca w tle (stałe)
@@ -528,11 +654,6 @@ function goToNextQuestion() {
     
     // Uruchom serca w tle
     setInterval(() => createBackgroundHeart(), 100);
-    
-    // Zmień tekst przycisku muzyki
-    if (musicStarted) {
-      musicBtn.textContent = "🔊 Głośniej";
-    }
   }
 }
 
@@ -549,26 +670,17 @@ function init() {
   document.getElementById('yes2').addEventListener('click', goToNextQuestion);
   document.getElementById('yes3').addEventListener('click', goToNextQuestion);
   
-  // Przycisk muzyki (do regulacji głośności)
-  musicBtn.addEventListener('click', () => {
-    if (!musicStarted) {
-      startMusic();
-    } else {
-      // Zmiana głośności
-      if (backgroundMusic.volume < 0.9) {
-        backgroundMusic.volume += 0.1;
-        musicBtn.textContent = `🔊 ${Math.round(backgroundMusic.volume * 100)}%`;
-        setTimeout(() => {
-          if (musicStarted) musicBtn.textContent = "🔊 Głośniej";
-        }, 2000);
-      } else {
-        backgroundMusic.volume = 0.3;
-        musicBtn.textContent = "🔊 Cichsza";
-        setTimeout(() => {
-          if (musicStarted) musicBtn.textContent = "🔊 Głośniej";
-        }, 2000);
-      }
-    }
+  // Przycisk szczegółów spotkania
+  detailsBtn.addEventListener('click', () => {
+    // Ukryj przycisk
+    detailsBtn.classList.add('hidden');
+    
+    // Pokaż szczegóły
+    detailsInfo.classList.remove('hidden');
+    
+    // Dodaj dodatkowe serduszka
+    heartsRainfall(20);
+    confettiBurst();
   });
   
   // Automatyczne odtwarzanie muzyki po interakcji (rezerwowe)
